@@ -1,31 +1,97 @@
 const { r2rClient } = require("r2r-js");
-const client = new r2rClient("http://localhost:7272");
 
-async function main() {
-
-  let results = await client.retrieval.search({
-  query: "How to use ABL mobile app?",
-});
-
-console.log(results.results.chunkSearchResults);
-  // Perform RAG query
-//   const ragResponse = await client.rag({
-//     query: "What does the file talk about?",
-//     rag_generation_config: {
-//       model: "openai/gpt-4o-mini",
-//       temperature: 0.0,
-//       stream: false,
-//     },
-//   });
-
-//   // Log search results
-//   ragResponse.results.search_results.chunk_search_results.forEach(result => {
-//     console.log(`Text: ${result.metadata.text.substring(0, 100)}...`);
-//     console.log(`Score: ${result.score}`);
-//   });
-
-//   // Log completion
-//   console.log(ragResponse.results.completion.choices[0].message.content);
+class RAGAgent {
+  constructor() {
+    this.client = new r2rClient("http://localhost:7272");
+  }
+  async ingestDocuments(file_path, metadata = null) {
+    let response;
+    if (metadata) {
+        response = await this.client.documents.create({
+            file: file_path,
+            metadata: metadata
+        });
+    } else {
+        console.log("Ingesting document without metadata...");
+        console.log("File path:", file_path);
+        response = await this.client.documents.create({
+            file: file_path
+        });
+    }
+    console.log("Ingestion Response:", response);
+    const documentId = response.results.documentId;
+    console.log("Document ID:", documentId);
+    response = await this.client.documents.extract({
+        id: documentId
+    });
+    console.log("Extraction Response:", response);
+  }
+  async deleteDocument(document_id)
+  {
+    let response;
+    try
+    {
+      response = await this.client.documents.delete({
+          id: document_id,
+      });
+      console.log("Deletion Response:", response);
+    }
+    catch(error)
+    {
+      console.error("Error deleting document:", error);
+      return false;
+    }
+    if(response.results.success)
+      return true
+    else
+      return false
+  }
+  async listDocuments()
+  {
+    const response = await this.client.documents.list({
+        limit: 10,
+        offset: 0,
+    });
+    console.log("List Documents Response:", response);
+    return response.results;
+  }
+  async ragQuery(query)
+  {
+    const response = await this.client.retrieval.search({
+      query: query,
+    });
+    const results = response.results.chunkSearchResults;
+    // results.forEach(result => {
+    //   console.log(`Text: ${result.metadata.text.substring(0, 100)}...`);
+    //   console.log(`Score: ${result.score}`);
+    // });
+    results.forEach((result, index) => {
+      console.log(`\n--- Result ${index + 1} ---`);
+      console.log(`Score: ${result.score}`);
+      console.log(`Text snippet: ${result.text}...`);
+    });
+    console.log(`\nTotal results: ${results.length}`);
+  }
+  async createConversation()
+  {
+    const response = await this.client.conversations.create();
+    console.log("Create Conversation Response:", response);
+  }
+  async listConversation()
+  {
+    const response = await this.client.conversations.list();
+    console.log("List Conversations Response:", response);
+  }
+  async addMessageToConversation(conversation_id, message, role="user")
+  {
+    const response = await this.client.conversations.addMessage({
+        id: conversation_id,
+        content: message,
+        role: role
+    });
+    console.log("Add Message Response:", response);
+  }
 }
 
-main();
+module.exports = RAGAgent;
+
