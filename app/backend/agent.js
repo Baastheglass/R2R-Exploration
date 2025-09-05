@@ -82,7 +82,7 @@ class RAGAgent {
     const response = await this.client.conversations.list();
     console.log("List Conversations Response:", response);
   }
-  async addMessageToConversation(conversation_id, message, role="user")
+  async addMessageToConversation(conversation_id, message, role)
   {
     const response = await this.client.conversations.addMessage({
         id: conversation_id,
@@ -91,7 +91,22 @@ class RAGAgent {
     });
     console.log("Add Message Response:", response);
   }
+  async getConversationDetails(conversation_id)
+  {
+    const response = await this.client.conversations.retrieve({
+        id: conversation_id,
+    });
+    console.log("Get Conversation Details Response:", response);
+    console.log("Messages in Conversation:");
+    for (const result of response.results) {
+      console.log(result);
+    }
+  }
 }
 
-module.exports = RAGAgent;
+agent = new RAGAgent();
+//agent.listConversation();
+//agent.addMessageToConversation("5a66daec-390d-4483-998d-a4b38318aac7", "I am bungoo", "system");
+agent.getConversationDetails("5a66daec-390d-4483-998d-a4b38318aac7");
+//module.exports = RAGAgent;
 
