@@ -34,34 +34,49 @@ export const DocumentUpload = ({ onDocumentUploaded }) => {
     setUploadProgress(0);
 
     try {
-      // TODO: Implement API call in this component
-      // Example:
-      // const formData = new FormData();
-      // formData.append('file', file);
-      // const response = await fetch('/api/documents', {
-      //   method: 'POST',
-      //   body: formData,
-      // });
-      // const result = await response.json();
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('file', file);
 
-      // Simulate upload progress
-      for (let i = 0; i <= 100; i += 10) {
-        setUploadProgress(i);
-        await new Promise(resolve => setTimeout(resolve, 100));
+      // Upload progress simulation (since real progress tracking is complex)
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => Math.min(prev + 20, 90));
+      }, 200);
+
+      // Upload to backend
+      const response = await fetch('http://localhost:3000/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.statusText}`);
       }
 
-      const document = {
-        id: Date.now().toString(),
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        uploadedAt: new Date(),
-        status: 'ready',
-      };
+      const result = await response.json();
+      
+      // Handle the simplified response from the backend
+      if (result.success && result.documentId) {
+        const document = {
+          id: result.documentId,
+          title: file.name,  // Use the actual file name
+          sizeInBytes: file.size,  // Use the actual file size
+          createdAt: new Date().toISOString(),
+          ingestionStatus: 'success', // Mark as success since upload completed
+          extractionStatus: 'success'
+        };
 
-      onDocumentUploaded(document);
+        onDocumentUploaded(document);
+      } else {
+        throw new Error(result.error || 'Upload failed');
+      }
     } catch (error) {
       console.error('Error uploading file:', error);
+      
+      // Create error document with local file info
       const document = {
         id: Date.now().toString(),
         name: file.name,

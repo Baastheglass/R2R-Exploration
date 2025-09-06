@@ -1,9 +1,23 @@
 const express = require('express');
 const cors = require('cors');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const RAGAgent = require('./agent');
 
 const app = express();
 const port = 3000;
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/');
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
+});
+const upload = multer({ storage: storage });
 
 // CORS configuration
 const corsOptions = {
@@ -20,12 +34,33 @@ app.use(express.json());
 // Initialize RAG Agent
 const agent = new RAGAgent();
 
-// Ingest documents endpoint
-app.post('/ingest', async (req, res) => {
+// Store document ID to file path mapping
+const documentFileMap = new Map();
+
+// File upload endpoint
+app.post('/upload', upload.single('file'), async (req, res) => {
   try {
-    const { file_path, metadata } = req.body;
-    const result = await agent.ingestDocuments(file_path, metadata);
-    res.json({ success: result });
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const filePath = req.file.path;
+    const metadata = req.body.metadata ? JSON.parse(req.body.metadata) : null;
+    
+    const result = await agent.ingestDocuments(filePath, metadata);
+    
+    // Check if ingestion was successful by looking for documentId (camelCase)
+    if (result.documentId) {
+      // Store the mapping between document ID and file path for later deletion
+      documentFileMap.set(result.documentId, filePath);
+      
+      res.json({ 
+        success: true,
+        ...result  // Send only the data from ingestDocuments function
+      });
+    } else {
+      res.status(500).json({ error: result.error || 'Ingestion failed' });
+    }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -35,7 +70,27 @@ app.post('/ingest', async (req, res) => {
 app.post('/delete', async (req, res) => {
   try {
     const { document_id } = req.body;
+    
+    // Delete from R2R system
     const result = await agent.deleteDocument(document_id);
+    
+    if (result) {
+      // Also delete the physical file if we have the mapping
+      const filePath = documentFileMap.get(document_id);
+      if (filePath && fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+          console.log(`Deleted file: ${filePath}`);
+        } catch (fileError) {
+          console.error(`Error deleting file ${filePath}:`, fileError);
+          // Don't fail the whole operation if file deletion fails
+        }
+      }
+      
+      // Remove from our mapping
+      documentFileMap.delete(document_id);
+    }
+    
     res.json({ success: result });
   } catch (error) {
     res.status(500).json({ error: error.message });

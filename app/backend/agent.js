@@ -6,28 +6,29 @@ class RAGAgent {
   }
   async ingestDocuments(file_path, metadata = null) {
     let response;
+    let ingestionResponse;
     try
     {
       if (metadata) {
-            response = await this.client.documents.create({
+            ingestionResponse = await this.client.documents.create({
                 file: file_path,
                 metadata: metadata
             });
         } else {
             console.log("Ingesting document without metadata...");
             console.log("File path:", file_path);
-            response = await this.client.documents.create({
+            ingestionResponse = await this.client.documents.create({
                 file: file_path
             });
         }
-        console.log("Ingestion Response:", response);
-        const documentId = response.results.documentId;
+        console.log("Ingestion Response:", ingestionResponse);
+        const documentId = ingestionResponse.results.documentId;
         console.log("Document ID:", documentId);
         response = await this.client.documents.extract({
             id: documentId
         });
         console.log("Extraction Response:", response);
-        return { success: true, documentId: documentId };
+        return ingestionResponse.results;
     }
     catch(error)
     {

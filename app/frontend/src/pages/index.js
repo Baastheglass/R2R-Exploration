@@ -76,7 +76,7 @@ export default function Home() {
     // Add a message to inform the user about the document upload
     const uploadMessage = {
       id: Date.now().toString(),
-      content: `Document "${document.name}" has been uploaded successfully. You can now ask questions about it.`,
+      content: `Document "${document.title || document.name}" has been uploaded successfully. You can now ask questions about it.`,
       role: 'assistant',
       timestamp: new Date(),
     };
