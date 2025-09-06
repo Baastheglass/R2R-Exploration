@@ -1,6 +1,5 @@
 import React, { useState, useCallback } from 'react';
 import { Upload, File, X, CheckCircle, AlertCircle, Loader } from 'lucide-react';
-import { chatAPI } from '@/lib/api';
 
 export const DocumentUpload = ({ onDocumentUploaded }) => {
   const [dragOver, setDragOver] = useState(false);
@@ -35,12 +34,24 @@ export const DocumentUpload = ({ onDocumentUploaded }) => {
     setUploadProgress(0);
 
     try {
-      const result = await chatAPI.uploadDocument(file, (progress) => {
-        setUploadProgress(progress);
-      });
+      // TODO: Implement API call in this component
+      // Example:
+      // const formData = new FormData();
+      // formData.append('file', file);
+      // const response = await fetch('/api/documents', {
+      //   method: 'POST',
+      //   body: formData,
+      // });
+      // const result = await response.json();
+
+      // Simulate upload progress
+      for (let i = 0; i <= 100; i += 10) {
+        setUploadProgress(i);
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
 
       const document = {
-        id: result.document_id || Date.now().toString(),
+        id: Date.now().toString(),
         name: file.name,
         size: file.size,
         type: file.type,

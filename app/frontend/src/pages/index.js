@@ -3,16 +3,16 @@ import { MessageComponent } from '@/components/MessageComponent';
 import { TypingIndicator } from '@/components/TypingIndicator';
 import { ChatInput } from '@/components/ChatInput';
 import { DocumentUpload, DocumentList } from '@/components/DocumentManager';
-import { chatAPI } from '@/lib/api';
+import { ConversationManager } from '@/components/ConversationManager';
 import { FileText, MessageSquare } from 'lucide-react';
 
 export default function Home() {
   const [messages, setMessages] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
-  const [activeTab, setActiveTab] = useState('chat');
+  const [activeTab, setActiveTab] = useState('conversations');
   const messagesEndRef = useRef(null);
-  const [conversationId, setConversationId] = useState();
+  const [conversationId, setConversationId] = useState(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -33,35 +33,10 @@ export default function Home() {
     setMessages(prev => [...prev, userMessage]);
     setIsTyping(true);
 
-    try {
-      const response = await chatAPI.sendMessage(content, conversationId);
-      
-      if (response.results && response.results.length > 0) {
-        const assistantMessage = {
-          id: (Date.now() + 1).toString(),
-          content: response.results[0].completion.choices[0].message.content,
-          role: 'assistant',
-          timestamp: new Date(),
-        };
-
-        setMessages(prev => [...prev, assistantMessage]);
-        
-        if (response.results[0].completion.id && !conversationId) {
-          setConversationId(response.results[0].completion.id);
-        }
-      }
-    } catch (error) {
-      console.error('Error sending message:', error);
-      const errorMessage = {
-        id: (Date.now() + 1).toString(),
-        content: 'Sorry, I encountered an error while processing your message. Please make sure the R2R backend is running.',
-        role: 'assistant',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsTyping(false);
-    }
+    // TODO: Implement API call in this component
+    // You can add your API logic here
+    
+    setIsTyping(false);
   };
 
   const handleDocumentUploaded = (document) => {
@@ -78,26 +53,37 @@ export default function Home() {
   };
 
   const handleDocumentDelete = async (documentId) => {
-    try {
-      await chatAPI.deleteDocument(documentId);
-      setDocuments(prev => prev.filter(doc => doc.id !== documentId));
-    } catch (error) {
-      console.error('Error deleting document:', error);
+    // TODO: Implement API call in this component
+    setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+  };
+
+  const handleConversationSelect = (newConversationId) => {
+    setConversationId(newConversationId);
+    setMessages([]); // Clear current messages when switching conversations
+    
+    if (newConversationId) {
+      // TODO: Load conversation details/messages here if needed
+      loadConversationMessages(newConversationId);
     }
+  };
+
+  const loadConversationMessages = async (convId) => {
+    // TODO: Implement API call in this component
+    console.log('Loading conversation messages for:', convId);
   };
 
   // Add welcome message on first load
   useEffect(() => {
-    if (messages.length === 0) {
+    if (messages.length === 0 && !conversationId) {
       const welcomeMessage = {
         id: 'welcome',
-        content: 'Hello! I\'m your R2R AI assistant. You can upload documents and ask questions about them. How can I help you today?',
+        content: 'Hello! I\'m your R2R AI assistant. You can create a new conversation, upload documents, and ask questions about them. How can I help you today?',
         role: 'assistant',
         timestamp: new Date(),
       };
       setMessages([welcomeMessage]);
     }
-  }, []);
+  }, [conversationId]);
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -105,13 +91,29 @@ export default function Home() {
       <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
         <div className="p-4 border-b border-gray-200">
           <h1 className="text-xl font-bold text-gray-800">R2R Chatbot</h1>
+          {conversationId && (
+            <p className="text-xs text-gray-500 mt-1">
+              Active: {conversationId.substring(0, 8)}...
+            </p>
+          )}
         </div>
 
         {/* Tab Navigation */}
         <div className="flex border-b border-gray-200">
           <button
+            onClick={() => setActiveTab('conversations')}
+            className={`flex-1 px-3 py-3 text-sm font-medium ${
+              activeTab === 'conversations'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <MessageSquare className="w-4 h-4 inline mr-2" />
+            Conversations
+          </button>
+          <button
             onClick={() => setActiveTab('documents')}
-            className={`flex-1 px-4 py-3 text-sm font-medium ${
+            className={`flex-1 px-3 py-3 text-sm font-medium ${
               activeTab === 'documents'
                 ? 'text-blue-600 border-b-2 border-blue-600'
                 : 'text-gray-500 hover:text-gray-700'
@@ -120,21 +122,16 @@ export default function Home() {
             <FileText className="w-4 h-4 inline mr-2" />
             Documents
           </button>
-          <button
-            onClick={() => setActiveTab('chat')}
-            className={`flex-1 px-4 py-3 text-sm font-medium ${
-              activeTab === 'chat'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <MessageSquare className="w-4 h-4 inline mr-2" />
-            Chat Info
-          </button>
         </div>
 
         {/* Tab Content */}
         <div className="flex-1 overflow-auto">
+          {activeTab === 'conversations' && (
+            <ConversationManager
+              onConversationSelect={handleConversationSelect}
+              currentConversationId={conversationId}
+            />
+          )}
           {activeTab === 'documents' && (
             <div>
               <DocumentUpload onDocumentUploaded={handleDocumentUploaded} />
@@ -144,34 +141,15 @@ export default function Home() {
               />
             </div>
           )}
-          {activeTab === 'chat' && (
-            <div className="p-4">
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                    Conversation Stats
-                  </h3>
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <p>Messages: {messages.length}</p>
-                    <p>Documents: {documents.length}</p>
-                    <p>Status: {isTyping ? 'Typing...' : 'Ready'}</p>
-                  </div>
-                </div>
-                
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                    Features
-                  </h3>
-                  <ul className="text-xs text-gray-600 space-y-1">
-                    <li>• Upload documents (PDF, DOC, TXT, MD)</li>
-                    <li>• Ask questions about your documents</li>
-                    <li>• Get AI-powered responses</li>
-                    <li>• Search through document content</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          )}
+        </div>
+
+        {/* Status Info */}
+        <div className="p-4 border-t border-gray-200 bg-gray-50">
+          <div className="text-xs text-gray-600 space-y-1">
+            <p>Messages: {messages.length}</p>
+            <p>Documents: {documents.length}</p>
+            <p>Status: {isTyping ? 'Typing...' : 'Ready'}</p>
+          </div>
         </div>
       </div>
 

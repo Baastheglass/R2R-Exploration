@@ -76,11 +76,13 @@ class RAGAgent {
   {
     const response = await this.client.conversations.create();
     console.log("Create Conversation Response:", response);
+    return response;
   }
   async listConversation()
   {
     const response = await this.client.conversations.list();
     console.log("List Conversations Response:", response);
+    return response;
   }
   async addMessageToConversation(conversation_id, message, role)
   {
@@ -101,6 +103,14 @@ class RAGAgent {
     for (const result of response.results) {
       console.log(result);
     }
+  }
+  async deleteConversation(conversation_id)
+  {
+    const response = await this.client.conversations.delete({
+        id: conversation_id,
+    });
+    console.log("Delete Conversation Response:", response);
+    return response;
   }
 }
 
