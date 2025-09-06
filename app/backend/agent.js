@@ -122,11 +122,5 @@ class RAGAgent {
   }
 }
 
-agent = new RAGAgent();
-agent.listConversations();
-agent.deleteConversation("09c560ee-611e-4829-aaf7-3cfa9024b5a2");
-//agent.getConversationDetails("5a66daec-390d-4483-998d-a4b38318aac7");
-//agent.addMessageToConversation("09c560ee-611e-4829-aaf7-3cfa9024b5a2", "Hello, how are you?", "user");
-//agent.deleteDocument("2bbe7547-cc7d-504c-a7f7-4a1328314406");
-//module.exports = RAGAgent;
+module.exports = RAGAgent;
 

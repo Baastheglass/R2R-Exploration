@@ -7,34 +7,62 @@ export const ConversationManager = ({ onConversationSelect, currentConversationI
 
   const loadConversations = async () => {
     setLoading(true);
-    // TODO: Implement API call in this component
-    // Example structure:
-    // const response = await fetch('/api/conversations');
-    // const data = await response.json();
-    // setConversations(data.conversations || []);
-    setConversations([]); // Placeholder
+    try {
+      const response = await fetch('http://localhost:3000/conversation/list', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await response.json();
+      console.log("Loaded Conversations:", data);
+      setConversations(data.conversations || []);
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+      setConversations([]);
+    }
     setLoading(false);
   };
 
   const createNewConversation = async () => {
-    // TODO: Implement API call in this component
-    // Example:
-    // await fetch('/api/conversations', { method: 'POST' });
-    // await loadConversations();
-    console.log('Create new conversation');
+    try {
+      const response = await fetch('http://localhost:3000/conversation/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await response.json();
+      if (data.success) {
+        await loadConversations();
+      }
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+    }
   };
 
   const deleteConversation = async (conversationId) => {
-    // TODO: Implement API call in this component
-    // Example:
-    // await fetch(`/api/conversations/${conversationId}`, { method: 'DELETE' });
-    // await loadConversations();
-    
-    // If we deleted the current conversation, select none
-    if (conversationId === currentConversationId) {
-      onConversationSelect(null);
+    try {
+      const response = await fetch('http://localhost:3000/conversation/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          conversation_id: conversationId,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        await loadConversations();
+        // If we deleted the current conversation, select none
+        if (conversationId === currentConversationId) {
+          onConversationSelect(null);
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
     }
-    console.log('Delete conversation:', conversationId);
   };
 
   useEffect(() => {

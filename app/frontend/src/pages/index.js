@@ -33,10 +33,41 @@ export default function Home() {
     setMessages(prev => [...prev, userMessage]);
     setIsTyping(true);
 
-    // TODO: Implement API call in this component
-    // You can add your API logic here
-    
-    setIsTyping(false);
+    try {
+      const response = await fetch('http://localhost:3000/query', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: content,
+          conversation_id: conversationId,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.response) {
+        const assistantMessage = {
+          id: (Date.now() + 1).toString(),
+          content: data.response,
+          role: 'assistant',
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      const errorMessage = {
+        id: (Date.now() + 1).toString(),
+        content: 'Sorry, I encountered an error while processing your message. Please make sure the backend is running.',
+        role: 'assistant',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const handleDocumentUploaded = (document) => {
@@ -53,8 +84,24 @@ export default function Home() {
   };
 
   const handleDocumentDelete = async (documentId) => {
-    // TODO: Implement API call in this component
-    setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+    try {
+      const response = await fetch('http://localhost:3000/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          document_id: documentId,
+        }),
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+      }
+    } catch (error) {
+      console.error('Error deleting document:', error);
+    }
   };
 
   const handleConversationSelect = (newConversationId) => {
@@ -68,8 +115,30 @@ export default function Home() {
   };
 
   const loadConversationMessages = async (convId) => {
-    // TODO: Implement API call in this component
-    console.log('Loading conversation messages for:', convId);
+    try {
+      const response = await fetch('http://localhost:3000/conversation/details', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          conversation_id: convId,
+        }),
+      });
+      
+      const data = await response.json();
+      if (data.success && data.messages) {
+        const formattedMessages = data.messages.map((msg, index) => ({
+          id: `${convId}-${index}`,
+          content: msg.message,
+          role: msg.role,
+          timestamp: new Date(),
+        }));
+        setMessages(formattedMessages);
+      }
+    } catch (error) {
+      console.error('Error loading conversation messages:', error);
+    }
   };
 
   // Add welcome message on first load

@@ -1,10 +1,20 @@
 const express = require('express');
+const cors = require('cors');
 const RAGAgent = require('./agent');
 
 const app = express();
 const port = 3000;
 
+// CORS configuration
+const corsOptions = {
+  origin: 'http://localhost:3001',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+};
+
 // Middleware
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Initialize RAG Agent
@@ -45,9 +55,9 @@ app.post('/list', async (req, res) => {
 // RAG query endpoint
 app.post('/query', async (req, res) => {
   try {
-    const { query } = req.body;
-    await agent.ragQuery(query);
-    res.json({ success: true, message: 'Query executed' });
+    const { query, conversation_id } = req.body;
+    const response = await agent.ragQuery(query, conversation_id);
+    res.json({ success: true, response: response });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -66,8 +76,8 @@ app.post('/conversation/create', async (req, res) => {
 // List conversations endpoint
 app.post('/conversation/list', async (req, res) => {
   try {
-    const result = await agent.listConversation();
-    res.json({ success: true, conversations: result.results || [] });
+    const result = await agent.listConversations();
+    res.json({ success: true, conversations: result || [] });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -88,8 +98,8 @@ app.post('/conversation/message', async (req, res) => {
 app.post('/conversation/details', async (req, res) => {
   try {
     const { conversation_id } = req.body;
-    await agent.getConversationDetails(conversation_id);
-    res.json({ success: true, message: 'Conversation details retrieved' });
+    const messages = await agent.getConversationDetails(conversation_id);
+    res.json({ success: true, messages: messages });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
