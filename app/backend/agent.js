@@ -6,25 +6,35 @@ class RAGAgent {
   }
   async ingestDocuments(file_path, metadata = null) {
     let response;
-    if (metadata) {
-        response = await this.client.documents.create({
-            file: file_path,
-            metadata: metadata
+    try
+    {
+      if (metadata) {
+            response = await this.client.documents.create({
+                file: file_path,
+                metadata: metadata
+            });
+        } else {
+            console.log("Ingesting document without metadata...");
+            console.log("File path:", file_path);
+            response = await this.client.documents.create({
+                file: file_path
+            });
+        }
+        console.log("Ingestion Response:", response);
+        const documentId = response.results.documentId;
+        console.log("Document ID:", documentId);
+        response = await this.client.documents.extract({
+            id: documentId
         });
-    } else {
-        console.log("Ingesting document without metadata...");
-        console.log("File path:", file_path);
-        response = await this.client.documents.create({
-            file: file_path
-        });
+        console.log("Extraction Response:", response);
+        return { success: true, documentId: documentId };
     }
-    console.log("Ingestion Response:", response);
-    const documentId = response.results.documentId;
-    console.log("Document ID:", documentId);
-    response = await this.client.documents.extract({
-        id: documentId
-    });
-    console.log("Extraction Response:", response);
+    catch(error)
+    {
+        console.error("Error ingesting document:", error);
+        return { success: false , error: error.message};
+    }
+    
   }
   async deleteDocument(document_id)
   {
@@ -34,17 +44,14 @@ class RAGAgent {
       response = await this.client.documents.delete({
           id: document_id,
       });
-      console.log("Deletion Response:", response);
+      console.log("Deletion Response:", response.results.success);
     }
     catch(error)
     {
       console.error("Error deleting document:", error);
       return false;
     }
-    if(response.results.success)
-      return true
-    else
-      return false
+    return response.results.success;
   }
   async listDocuments()
   {
@@ -52,37 +59,33 @@ class RAGAgent {
         limit: 10,
         offset: 0,
     });
-    console.log("List Documents Response:", response);
+    console.log("List Documents Response:", response.results);
     return response.results;
   }
-  async ragQuery(query)
+  async ragQuery(query, conversation_id = null)
   {
-    const response = await this.client.retrieval.search({
-      query: query,
+    const ragResponse = await this.client.retrieval.agent({
+        message: {
+            role: "user",
+            content: query
+        },
+        ragTools: ["search_file_descriptions", "search_file_knowledge", "get_file_content"],
+        conversationId: conversation_id
     });
-    const results = response.results.chunkSearchResults;
-    // results.forEach(result => {
-    //   console.log(`Text: ${result.metadata.text.substring(0, 100)}...`);
-    //   console.log(`Score: ${result.score}`);
-    // });
-    results.forEach((result, index) => {
-      console.log(`\n--- Result ${index + 1} ---`);
-      console.log(`Score: ${result.score}`);
-      console.log(`Text snippet: ${result.text}...`);
-    });
-    console.log(`\nTotal results: ${results.length}`);
+    console.log("RAG Response:", ragResponse.results.messages[0].content);
+    return ragResponse.results.messages[0].content;
   }
   async createConversation()
   {
     const response = await this.client.conversations.create();
     console.log("Create Conversation Response:", response);
-    return response;
+    return response.results;
   }
-  async listConversation()
+  async listConversations()
   {
     const response = await this.client.conversations.list();
-    console.log("List Conversations Response:", response);
-    return response;
+    console.log("List Conversations Response:", response.results);
+    return response.results;
   }
   async addMessageToConversation(conversation_id, message, role)
   {
@@ -91,18 +94,23 @@ class RAGAgent {
         content: message,
         role: role
     });
-    console.log("Add Message Response:", response);
+    console.log("Add Message Response:", response.results);
+    return response.results;
   }
   async getConversationDetails(conversation_id)
   {
     const response = await this.client.conversations.retrieve({
         id: conversation_id,
     });
+    let messages = [];
     console.log("Get Conversation Details Response:", response);
     console.log("Messages in Conversation:");
     for (const result of response.results) {
       console.log(result);
+      messages.push({message: result.message.content, role: result.message.role});
     }
+    console.log("Messages Array:", messages);
+    return messages;
   }
   async deleteConversation(conversation_id)
   {
@@ -110,13 +118,15 @@ class RAGAgent {
         id: conversation_id,
     });
     console.log("Delete Conversation Response:", response);
-    return response;
+    return response.results.success;
   }
 }
 
 agent = new RAGAgent();
-//agent.listConversation();
-//agent.addMessageToConversation("5a66daec-390d-4483-998d-a4b38318aac7", "I am bungoo", "system");
-agent.getConversationDetails("5a66daec-390d-4483-998d-a4b38318aac7");
+agent.listConversations();
+agent.deleteConversation("09c560ee-611e-4829-aaf7-3cfa9024b5a2");
+//agent.getConversationDetails("5a66daec-390d-4483-998d-a4b38318aac7");
+//agent.addMessageToConversation("09c560ee-611e-4829-aaf7-3cfa9024b5a2", "Hello, how are you?", "user");
+//agent.deleteDocument("2bbe7547-cc7d-504c-a7f7-4a1328314406");
 //module.exports = RAGAgent;
 
