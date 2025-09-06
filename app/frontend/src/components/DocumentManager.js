@@ -138,10 +138,13 @@ export const DocumentUpload = ({ onDocumentUploaded }) => {
 export const DocumentList = ({ documents, onDocumentDelete }) => {
   const getStatusIcon = (status) => {
     switch (status) {
+      case 'success':
       case 'ready':
         return <CheckCircle className="w-4 h-4 text-green-500" />;
       case 'processing':
+      case 'pending':
         return <Loader className="w-4 h-4 text-blue-500 animate-spin" />;
+      case 'failed':
       case 'error':
         return <AlertCircle className="w-4 h-4 text-red-500" />;
       case 'uploading':
@@ -180,14 +183,14 @@ export const DocumentList = ({ documents, onDocumentDelete }) => {
           >
             <div className="flex items-center space-x-3 flex-1 min-w-0">
               <div className="flex-shrink-0">
-                {getStatusIcon(doc.status)}
+                {getStatusIcon(doc.ingestionStatus || doc.status)}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-gray-800 truncate">
-                  {doc.name}
+                  {doc.title || doc.name}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {formatFileSize(doc.size)} • {doc.uploadedAt.toLocaleDateString()}
+                  {formatFileSize(doc.sizeInBytes || doc.size || 0)} • {doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : 'Unknown date'}
                 </p>
               </div>
             </div>

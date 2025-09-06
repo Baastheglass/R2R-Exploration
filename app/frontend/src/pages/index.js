@@ -154,6 +154,25 @@ export default function Home() {
     }
   }, [conversationId]);
 
+  // Load documents on page load
+  useEffect(() => {
+    const loadDocuments = async () => {
+      try {
+        const response = await fetch('http://localhost:3000/list', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await response.json();
+        if (data.documents) {
+          setDocuments(data.documents);
+        }
+      } catch (error) {
+        console.error('Error loading documents:', error);
+      }
+    };
+    loadDocuments();
+  }, []);
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
